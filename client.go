@@ -1808,6 +1808,78 @@ func (client *gocloak) DeleteIdentityProvider(token string, realm string, alias 
 	return checkForError(resp, err, errMessage)
 }
 
+// ------------------
+// Identity Providers Mappers
+// ------------------
+
+// CreateIdentityProviderMapper creates an identity provider mapper in identity provider
+func (client *gocloak) CreateIdentityProviderMapper(token string, realm string, providerAlias string, providerMapperRep IdentityProviderMapperRepresentation) (string, error) {
+	const errMessage = "could not create identity provider"
+
+	resp, err := client.getRequestWithBearerAuth(token).
+		SetBody(providerMapperRep).
+		Post(client.getAdminRealmURL(realm, "identity-provider", "instances", providerAlias, "mappers"))
+
+	if err := checkForError(resp, err, errMessage); err != nil {
+		return "", err
+	}
+
+	return getID(resp), nil
+}
+
+// GetIdentityProviderMappers returns list of identity provider mappers in identity provider
+func (client *gocloak) GetIdentityProviderMappers(token string, realm string, providerAlias string) ([]*IdentityProviderMapperRepresentation, error) {
+	const errMessage = "could not get identity providers"
+
+	result := []*IdentityProviderMapperRepresentation{}
+	resp, err := client.getRequestWithBearerAuth(token).
+		SetResult(&result).
+		Get(client.getAdminRealmURL(realm, "identity-provider", "instances", providerAlias, "mappers"))
+
+	if err := checkForError(resp, err, errMessage); err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+// GetIdentityProviderMapper gets the identity provider mapper in identity provider
+func (client *gocloak) GetIdentityProviderMapper(token string, realm string, providerAlias string, id string) (*IdentityProviderMapperRepresentation, error) {
+	const errMessage = "could not get identity provider"
+
+	result := IdentityProviderMapperRepresentation{}
+	resp, err := client.getRequestWithBearerAuth(token).
+		SetResult(&result).
+		Get(client.getAdminRealmURL(realm, "identity-provider", "instances", providerAlias, "mappers", id))
+
+	if err := checkForError(resp, err, errMessage); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
+// UpdateIdentityProviderMapper updates the identity provider mapper in identity provider
+func (client *gocloak) UpdateIdentityProviderMapper(token string, realm string, providerAlias string, id string, providerMapperRep IdentityProviderMapperRepresentation) error {
+	const errMessage = "could not update identity provider"
+
+	resp, err := client.getRequestWithBearerAuth(token).
+		SetBody(providerMapperRep).
+		Put(client.getAdminRealmURL(realm, "identity-provider", "instances", providerAlias, "mappers", id))
+
+	return checkForError(resp, err, errMessage)
+}
+
+// DeleteIdentityProvider deletes the identity provider in a realm
+func (client *gocloak) DeleteIdentityProviderMapper(token string, realm string, providerAlias string, id string) error {
+	const errMessage = "could not delete identity provider mapper"
+
+	resp, err := client.getRequestWithBearerAuth(token).
+		Delete(client.getAdminRealmURL(realm, "identity-provider", "instances", providerAlias, "mappers", id))
+
+	return checkForError(resp, err, errMessage)
+}
+
 // GetResource returns a client's resource with the given id
 func (client *gocloak) GetResource(token string, realm string, clientID string, resourceID string) (*ResourceRepresentation, error) {
 	const errMessage = "could not get resource"
