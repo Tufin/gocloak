@@ -2954,6 +2954,7 @@ func TestGocloak_CreateIdentityProviderMapper(t *testing.T) {
 
 	t.Run("update provider mapper", func(t *testing.T) {
 		repr := IdentityProviderMapperRepresentation{
+			ID:                     &id,
 			Name:                   StringP("mapper"),
 			IdentityProviderAlias:  &providerAlias,
 			IdentityProviderMapper: StringP("role-mapper"),
