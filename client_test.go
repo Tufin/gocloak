@@ -153,6 +153,51 @@ func GetClientByClientID(t *testing.T, client GoCloak, clientID string) *Client 
 	return nil
 }
 
+func CreateIdentityProvider(t *testing.T, client GoCloak) (func(), string) {
+	cfg := GetConfig(t)
+	token := GetAdminToken(t, client)
+
+	providerRep := IdentityProviderRepresentation{
+		Alias:                     GetRandomNameP("oidc"),
+		DisplayName:               GetRandomNameP("custom-oidc"),
+		Enabled:                   BoolP(true),
+		TrustEmail:                BoolP(true),
+		FirstBrokerLoginFlowAlias: StringP("first broker login"),
+		Config: map[string]string{
+			"clientId":                 cfg.GoCloak.ClientID,
+			"clientSecret":             cfg.GoCloak.ClientSecret,
+			"authorizationUrl":         "authorization-url",
+			"tokenUrl":                 "token-url",
+			"logoutUrl":                "logout-url",
+			"userInfoUrl":              "userinfo-url",
+			"issuer":                   "test-issuer",
+			"loginHint":                "true",
+			"validateSignature":        "true",
+			"backchannelLogout":        "false",
+			"useJwksUrl":               "true",
+			"uiLocales":                "true",
+			"disableUserInfo":          "true",
+			"defaultScopes":            "default-scope",
+			"prompt":                   "false",
+			"allowedClockSkew":         "10",
+			"forwardedQueryParameters": "forwarded-query-parameters",
+		},
+	}
+	providerID, err := client.CreateIdentityProvider(token.AccessToken, cfg.GoCloak.Realm, providerRep)
+
+	assert.NoError(t, err, "Create Provider failed")
+	t.Logf("Created Provider ID: %s ", providerID)
+
+	tearDown := func() {
+		err := client.DeleteIdentityProvider(
+			token.AccessToken,
+			cfg.GoCloak.Realm,
+			providerID)
+		assert.NoError(t, err, "DeleteProvider failed")
+	}
+	return tearDown, providerID
+}
+
 func CreateGroup(t *testing.T, client GoCloak) (func(), string) {
 	cfg := GetConfig(t)
 	token := GetAdminToken(t, client)
@@ -2863,6 +2908,68 @@ func TestGocloak_CreateProvider(t *testing.T) {
 
 	t.Run("Delete OIDC V1.0 provider", func(t *testing.T) {
 		err := client.DeleteIdentityProvider(token.AccessToken, cfg.GoCloak.Realm, "oidc")
+		assert.NoError(t, err)
+	})
+}
+
+// -----------------
+// identity provider Mapper
+// -----------------
+
+func TestGocloak_CreateIdentityProviderMapper(t *testing.T) {
+	cfg := GetConfig(t)
+	client := NewClientWithDebug(t)
+	token := GetAdminToken(t, client)
+
+	// Create
+	roleTearDown, roleName := CreateClientRole(t, client)
+	providerTearDown, providerAlias := CreateIdentityProvider(t, client)
+	// Delete
+	defer roleTearDown()
+	defer providerTearDown()
+
+	repr := IdentityProviderMapperRepresentation{
+		Name:                   StringP("mapper"),
+		IdentityProviderAlias:  &providerAlias,
+		IdentityProviderMapper: StringP("role-mapper"),
+		Config: map[string]string{
+			"claim":      "groups",
+			"role":       roleName,
+			"claimValue": "idp-grp"},
+	}
+	id, err := client.CreateIdentityProviderMapper(token.AccessToken, cfg.GoCloak.Realm, providerAlias, repr)
+	assert.NoError(t, err)
+
+	t.Run("get provider mappers", func(t *testing.T) {
+		mappers, err := client.GetIdentityProviderMappers(token.AccessToken, cfg.GoCloak.Realm, providerAlias)
+		assert.NoError(t, err)
+		assert.Equal(t, 1, len(mappers))
+	})
+
+	t.Run("get provider mapper", func(t *testing.T) {
+		mapper, err := client.GetIdentityProviderMapper(token.AccessToken, cfg.GoCloak.Realm, providerAlias, id)
+		assert.NoError(t, err)
+		assert.Equal(t, "mapper", *(mapper.Name))
+	})
+
+	t.Run("update provider mapper", func(t *testing.T) {
+		repr := IdentityProviderMapperRepresentation{
+			ID:                     &id,
+			Name:                   StringP("mapper"),
+			IdentityProviderAlias:  &providerAlias,
+			IdentityProviderMapper: StringP("role-mapper"),
+			Config: map[string]string{
+				"claim":      "new-groups",
+				"role":       roleName,
+				"claimValue": "idp-grp",
+			},
+		}
+		err := client.UpdateIdentityProviderMapper(token.AccessToken, cfg.GoCloak.Realm, providerAlias, id, repr)
+		assert.NoError(t, err)
+	})
+
+	t.Run("delete provider mapper", func(t *testing.T) {
+		err := client.DeleteIdentityProviderMapper(token.AccessToken, cfg.GoCloak.Realm, providerAlias, id)
 		assert.NoError(t, err)
 	})
 }

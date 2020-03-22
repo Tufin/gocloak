@@ -218,6 +218,20 @@ type GoCloak interface {
 	GetUserSessions(token, realm, userID string) ([]*UserSessionRepresentation, error)
 	GetUserOfflineSessionsForClient(token, realm, userID, clientID string) ([]*UserSessionRepresentation, error)
 
+	// *** Identity Provider **
+	CreateIdentityProvider(token string, realm string, providerRep IdentityProviderRepresentation) (string, error)
+	GetIdentityProviders(token string, realm string) ([]*IdentityProviderRepresentation, error)
+	GetIdentityProvider(token string, realm string, alias string) (*IdentityProviderRepresentation, error)
+	UpdateIdentityProvider(token string, realm string, alias string, providerRep IdentityProviderRepresentation) error
+	DeleteIdentityProvider(token string, realm string, alias string) error
+
+	// *** Identity Provider Mapper**
+	CreateIdentityProviderMapper(token string, realm string, providerAlias string, providerMapperRep IdentityProviderMapperRepresentation) (string, error)
+	GetIdentityProviderMappers(token string, realm string, providerAlias string) ([]*IdentityProviderMapperRepresentation, error)
+	GetIdentityProviderMapper(token string, realm string, providerAlias string, id string) (*IdentityProviderMapperRepresentation, error)
+	UpdateIdentityProviderMapper(token string, realm string, providerAlias string, id string, providerMapperRep IdentityProviderMapperRepresentation) error
+	DeleteIdentityProviderMapper(token string, realm string, providerAlias string, id string) error
+
 	// *** Protection API ***
 	GetResource(token string, realm string, clientID string, resourceID string) (*Resource, error)
 	GetResources(token string, realm string, clientID string) ([]*Resource, error)
